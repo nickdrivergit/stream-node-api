@@ -231,4 +231,58 @@ app.get('/get-result/:id', async(req, res) => {
     }
 })
 
+//Get all results from Postgresql
+app.get('/get-avg/grade/:grade?', async(req, res) => {
+    const { grade } = req.params;
+    sqlQuery = `SELECT 
+        s.grade,
+        r.subject,
+        ROUND(AVG(r.avg), 2) AS average_mark
+    FROM (
+        SELECT
+            student_id,
+            first_name,
+            surname,
+            grade,
+            classroom
+        FROM
+            students
+    ) s
+    LEFT JOIN
+    (
+        SELECT
+            student_id,
+            subject,
+            ROUND(avg(mark), 2) AS avg
+        FROM
+            results
+        GROUP BY
+            student_id, subject
+    ) r
+    ON s.student_id = r.student_id`;
+    if (!grade){
+        console.log("NO GRADE");
+        sqlQuery += `
+            GROUP BY
+                s.grade, r.subject
+            ORDER BY
+                s.grade, r.subject`
+    }
+    else {
+        sqlQuery += `
+            WHERE s.grade = ${grade}
+            GROUP BY
+                s.grade, r.subject
+            ORDER BY
+                s.grade, r.subject`
+    }
+    try{
+        console.log(sqlQuery);
+        const results = await pool.query(sqlQuery);
+        res.json(results.rows)
+    } catch(err) {
+        console.error(err.message);
+    }
+})
+
 // END GET DATA //
